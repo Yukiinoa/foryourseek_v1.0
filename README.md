@@ -1,16 +1,5 @@
 # foryourseek
-
-Personal paper + job watcher.
-
-- Papers: pull new items from RSS feeds, optionally enrich metadata/abstracts, deduplicate in SQLite, and score/summarize.
-- Jobs: crawl job boards, extract structured fields when possible, deduplicate, and score/summarize.
-- Output: HTML report (and optional email).
-
-This repository is intended to be safe to publish:
-- `config.yaml` is ignored (your personal profile and preferences).
-- `.env` is ignored (your keys).
-- runtime state (`state/`) and logs (`logs/`) are ignored.
-
+An AI-powered personal information agent for daily recommendation of your interested journal papers & open positions (mainly in Europe)
 ## Example Output (Screenshots)
 
 ![Email preview (Gmail)](assets/email_gmail.png)
