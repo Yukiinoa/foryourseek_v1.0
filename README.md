@@ -1,7 +1,7 @@
 # foryourseek
-An AI-powered personal information agent for daily recommendation of your interested journal papers & open positions (mainly in Europe)
+An AI-powered personal information agent for **daily recommendation of your interested journal papers & open positions (mainly in Europe)**
 
-Example Output
+**Output exmples:**
 ![Email preview (Gmail)](assets/email_gmail.png)
 <img src="assets/report_html.png" width="900" alt="Full HTML report preview">
 
