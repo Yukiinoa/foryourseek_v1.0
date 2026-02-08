@@ -1,10 +1,10 @@
 # foryourseek
 An AI-powered personal information agent for daily recommendation of your interested journal papers & open positions (mainly in Europe)
-## Example Output (Screenshots)
 
+Example Output
 ![Email preview (Gmail)](assets/email_gmail.png)
-
 <img src="assets/report_html.png" width="900" alt="Full HTML report preview">
+
 ## Requirements
 
 - Python 3.10+
