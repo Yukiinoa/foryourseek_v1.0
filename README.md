@@ -5,15 +5,6 @@ An AI-powered personal information agent for daily recommendation of your intere
 ![Email preview (Gmail)](assets/email_gmail.png)
 
 <img src="assets/report_html.png" width="900" alt="Full HTML report preview">
-
-How to update:
-- Put redacted screenshots at `assets/email_gmail.png` and `assets/report_html.png` (or change the paths above).
-- Commit and push.
-
-Privacy:
-- Redact emails, names, institutions, and any keys/tokens visible in the UI.
-- Avoid pasting full scraped job descriptions/paper abstracts if you are unsure about redistribution rights.
-
 ## Requirements
 
 - Python 3.10+
