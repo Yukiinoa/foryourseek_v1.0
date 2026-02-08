@@ -11,6 +11,30 @@ This repository is intended to be safe to publish:
 - `.env` is ignored (your keys).
 - runtime state (`state/`) and logs (`logs/`) are ignored.
 
+## Example Output (Screenshots)
+
+Recommended (versioned, stays in the repo):
+
+1. Create a folder for images:
+```bash
+mkdir -p assets
+```
+
+2. Put your redacted screenshots there (examples):
+- `assets/email_gmail.png`
+- `assets/report_html.png`
+
+3. Embed in `README.md`:
+```md
+![Email preview (Gmail)](assets/email_gmail.png)
+
+<img src="assets/report_html.png" width="900" alt="Full HTML report preview">
+```
+
+Tips:
+- Redact emails, names, institutions, and any keys/tokens visible in the UI.
+- Avoid pasting full scraped job descriptions/paper abstracts if you are unsure about redistribution rights; screenshots of the UI are usually enough.
+
 ## Requirements
 
 - Python 3.10+
@@ -115,30 +139,6 @@ Outputs (per run):
 - `logs/run_<run_id>.jsonl`: structured events
 - `logs/daily_brief_<run_id>.html`: full HTML report
 - `logs/daily_brief_<run_id>_email.html`: email-safe HTML (more conservative markup)
-
-## Example Output (Screenshots)
-
-Recommended (versioned, stays in the repo):
-
-1. Create a folder for images:
-```bash
-mkdir -p assets
-```
-
-2. Put your redacted screenshots there (examples):
-- `assets/email_gmail.png`
-- `assets/report_html.png`
-
-3. Embed in `README.md`:
-```md
-![Email preview (Gmail)](assets/email_gmail.png)
-
-<img src="assets/report_html.png" width="900" alt="Full HTML report preview">
-```
-
-Tips:
-- Redact emails, names, institutions, and any keys/tokens visible in the UI.
-- Avoid pasting full scraped job descriptions/paper abstracts if you are unsure about redistribution rights; screenshots of the UI are usually enough.
 
 ## Testing and Formatting
 
