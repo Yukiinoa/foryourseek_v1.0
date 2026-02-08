@@ -13,27 +13,17 @@ This repository is intended to be safe to publish:
 
 ## Example Output (Screenshots)
 
-Recommended (versioned, stays in the repo):
-
-1. Create a folder for images:
-```bash
-mkdir -p assets
-```
-
-2. Put your redacted screenshots there (examples):
-- `assets/email_gmail.png`
-- `assets/report_html.png`
-
-3. Embed in `README.md`:
-```md
 ![Email preview (Gmail)](assets/email_gmail.png)
 
 <img src="assets/report_html.png" width="900" alt="Full HTML report preview">
-```
 
-Tips:
+How to update:
+- Put redacted screenshots at `assets/email_gmail.png` and `assets/report_html.png` (or change the paths above).
+- Commit and push.
+
+Privacy:
 - Redact emails, names, institutions, and any keys/tokens visible in the UI.
-- Avoid pasting full scraped job descriptions/paper abstracts if you are unsure about redistribution rights; screenshots of the UI are usually enough.
+- Avoid pasting full scraped job descriptions/paper abstracts if you are unsure about redistribution rights.
 
 ## Requirements
 
