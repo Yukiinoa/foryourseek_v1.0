@@ -1,0 +1,314 @@
+# foryourseek configuration example (copy to config.yaml and edit)
+# Note: do not commit config.yaml (contains personal profile/preferences) to a public repo.
+
+profile:
+  field: "Your Research Field"
+  focus: "One sentence describing your research focus (optional but helps the LLM)."
+  include_keywords:
+    - "keyword 1"
+    - "keyword 2"
+    - "keyword 3"
+  exclude_keywords:
+    - "medical"
+    - "petroleum"
+    - "oil"
+    - "gas"
+
+papers:
+  max_per_day: 30
+  debug:
+    export_audit: false
+    audit_limit: 0
+  # Max candidates to crawl (prefilter first, then send top items to the LLM)
+  max_candidates_per_run: 200
+  # Minimum candidates per journal (round-robin across journals)
+  min_candidates_per_journal: 10
+  # Max items sent to the LLM
+  max_llm_per_run: 30
+  prefilter:
+    title_weight: 3
+    abstract_weight: 1
+    min_score_for_llm: 2
+    allow_if_no_keywords: true
+  strong_threshold: 8
+  normal_threshold: 5
+  # Optional: publisher API abstract retrieval (generic template)
+  # Generic: any JSON API works as long as it can return an abstract field
+  # If PUBLISHER_API_BASE is not set, this provider is skipped automatically
+  abstract_providers:
+    - name: "generic_publisher_api"
+      enabled: true
+      requests:
+        # Example: Elsevier Article Retrieval API (replace with any publisher API)
+        - url: "${PUBLISHER_API_BASE}/doi/{doi}?httpAccept=application/json"
+          requires: ["doi"]           # DOI preferred
+        - url: "${PUBLISHER_API_BASE}/pii/{pii}?httpAccept=application/json"
+          requires: ["pii"]           # fallback to PII
+      headers:
+        Accept: "application/json"
+        X-ELS-APIKey: "${PUBLISHER_API_KEY}"      # Elsevier API Key (other publishers may use different header names)
+        X-ELS-Insttoken: "${PUBLISHER_API_INSTTOKEN}"  # Optional: institution token
+      response_paths:
+        - "full-text-retrieval-response.coredata.dc:description"  # Elsevier
+        - "abstract"          # direct abstract field
+        - "message.abstract"  # Crossref-like structure
+        - "data.abstract"     # common API wrapper field
+      abstract_is_html: true
+  journals:
+    - name: "Journal of Hydrology"
+      rss: "https://rss.sciencedirect.com/publication/science/00221694"
+      enrich:
+        enabled: true
+        method: "meta_tags"   # meta_tags | none
+        # Optional: if you know the detail-page abstract selector, fill it for more precise extraction
+        abstract_selector: ""
+    - name: "HESS"
+      rss: "https://hess.copernicus.org/articles/xml/rss2_0.xml"
+      enrich:
+        enabled: true
+        method: "meta_tags"
+        abstract_selector: ""
+      # rss_fallback:
+      #   method: "openalex"
+      #   journal_name: "Remote Sensing"
+      #   openalex_source_id: "S43295729"
+      #   max_results: 50
+    - name: "Nonlinear Processes in Geophysics"
+      rss: "https://npg.copernicus.org/articles/xml/rss2_0.xml"
+      enrich:
+        enabled: true
+        method: "meta_tags"
+        abstract_selector: ""
+
+jobs:
+  max_per_day: 40
+  # Max candidates to crawl (prefilter first, then send top items to the LLM)
+  max_candidates_per_run: 40
+  # Max items sent to the LLM
+  max_llm_per_run: 30
+  debug:
+    export_candidates: true
+    candidates_limit: 0
+    export_audit: false
+    audit_limit: 0
+  # Resurfacing policy for previously seen jobs
+  resurface:
+    mode: "unexpired"          # never|unexpired|always
+    allow_without_deadline: true
+  prefilter:
+    title_weight: 3
+    desc_weight: 1
+    min_score_for_llm: 2
+    allow_if_no_keywords: true
+    keywords: []
+  degree_keywords:
+    - "phd"
+    - "ph.d"
+    - "ph.d."
+    - "doctoral"
+    - "doctoral candidate"
+    - "doctoral position"
+    - "phd student"
+    - "studentship"
+    - "early stage researcher"
+  exclude_keywords:
+    - "postdoc"
+    - "postdoctoral"
+    - "post doc"
+    - "post-doc"
+    - "post-doctoral"
+    - "post doctoral"
+    - "assistant professor"
+    - "associate professor"
+    - "full professor"
+    - "tenure track"
+    - "tenure-track"
+    - "non-tenure track"
+    - "open rank"
+    - "faculty"
+    - "lecturer"
+    - "instructor"
+    - "teaching"
+    - "director"
+    - "manager"
+    - "intern"
+    - "internship"
+    - "professor"
+    - "senior"
+  # Domain keywords (used for prefilter scoring; not a hard filter)
+  domain_keywords:
+    - "domain keyword 1"
+    - "domain keyword 2"
+    - "domain keyword 3"
+  # Dedup strategy: url (stable URLs) | semantic_key (URLs may vary by site)
+  dedup:
+    method: "semantic_key"
+    semantic_key_fields: ["title", "org", "location"]
+  sites:
+    - name: "EGU Jobs"
+      adapter: "egu"
+      url: "https://www.egu.eu/jobs/"
+      pagination:
+        mode: "auto"
+        page_param: "page"
+        start: 1
+      selectors:
+        list_item: "a"              # Example only: adjust per site
+        title: ""                   # list page title
+        url: ""                     # list page url (optional)
+        org: ""                     # list page org (optional)
+        location: ""                # list page location (optional)
+        deadline: ""                # list page deadline (optional)
+        posted_at: ""               # list page posted_at (optional)
+        description: ""             # detail page description selector (optional; falls back to smart extractor / JSON-LD / meta)
+        detail_description: ""      # same as above (alias)
+    - name: "AGU Jobs"
+      adapter: "agu"
+      url: "https://findajob.agu.org/jobs/"
+      pagination:
+        mode: "auto"
+        start: 1
+      selectors:
+        list_item: "a"              # Example only: adjust per site
+        title: ""                   # list page title
+        url: ""                     # list page url (optional)
+        org: ""                     # list page org (optional)
+        location: ""                # list page location (optional)
+        deadline: ""                # list page deadline (optional)
+        posted_at: ""               # list page posted_at (optional)
+        description: ""             # detail page description selector (optional; falls back to smart extractor / JSON-LD / meta)
+        detail_description: ""      # same as above (alias)
+    - name: "EURAXESS"
+      adapter: "euraxess"
+      url: "https://euraxess.ec.europa.eu/jobs/search"
+      pagination:
+        mode: "auto"
+        page_param: "page"
+        start: 1
+      search:
+        method: "post"
+        keyword_operator: "OR"      # OR|AND|SPACE
+        search_entity: "13934"      # Jobs, Funding, Hosting
+        keywords: []                # if empty, use profile.include_keywords
+        filter_url: ""              # optional: paste a pre-filtered URL with f[] params
+      selectors:
+        list_item: "a"
+        title: ""
+        url: ""
+        org: ""
+        location: ""
+        deadline: ""
+        posted_at: ""
+        description: ""
+        detail_description: ""
+    - name: "ETH GetHired"
+      adapter: "eth_gethired"
+      url: "https://eth-gethired.ch/en/jobs/"
+      pagination:
+        mode: "api"
+      search:
+        method: "eth_gethired"
+        jobtypes:
+          - "Academic"
+        jobtypessub:
+          - "PhD Position"
+        page_size: 50
+    - name: "AcademicTransfer"
+      adapter: "academictransfer"
+      url: "https://www.academictransfer.com/en/jobs?q=PhD"
+      pagination:
+        mode: "api"
+      search:
+        method: "academictransfer"
+        query: ""
+        require_phd: true
+        query_mode: "per_keyword"
+        page_size: 25
+        structured_filters:
+          education_level: [2]
+    - name: "Jobvector PhD"
+      adapter: "jobvector"
+      url: "https://www.jobvector.de/en/jobs/phd/"
+      pagination:
+        mode: "count"
+        page_param: "pn"
+        start: 1
+        count_pattern: "(\\d+)\\s*(Stellenangebote|jobs?|job offers|job postings)"
+        item_selector: "article.list-item-job"
+    - name: "Jobvector Doctoral Researcher"
+      adapter: "jobvector"
+      url: "https://www.jobvector.de/en/jobs/doctoral+researcher/"
+      pagination:
+        mode: "count"
+        page_param: "pn"
+        start: 1
+        count_pattern: "(\\d+)\\s*(Stellenangebote|jobs?|job offers|job postings)"
+        item_selector: "article.list-item-job"
+
+extract:
+  min_len: 120
+  fallback: "trafilatura"          # none|trafilatura
+
+llm:
+  provider: "gemini"
+  fallback_providers: ["openai", "minimax"]
+  model: "gemini-3-flash-preview"
+  per_agent:
+    papers:
+      model: "gemini-3-flash-preview"
+    jobs:
+      model: "gemini-3-flash-preview"
+  temperature: 0
+  output_language: "en"            # zh|en
+  response_schema: true
+  provider_options:
+    openai:
+      api_key_env: "OPENAI_API_KEY"
+      use_response_format: true
+      response_format: "json_object"
+      model: "gpt-4o-mini"
+    gemini:
+      api_key_envs: ["GEMINI_API_KEY", "GOOGLE_API_KEY"]
+      use_schema: true
+      model: "gemini-3-flash-preview"
+    minimax:
+      api_key_env: "MINIMAX_API_KEY"
+      api_base: "https://api.minimaxi.com/v1"
+      use_response_format: true
+      response_format: "json_object"
+      model: "MiniMax-M2.1"
+  pricing:
+    input_per_1m: 0.5
+    output_per_1m: 3.0
+  max_calls_per_run: 50
+  timeout_sec: 45
+  max_input_chars_per_item: 8000   # v2.1: token blowout guardrail (char budget is more robust)
+  max_cost_per_day_usd: 0.0        # Optional: enable after cost estimation is implemented
+  on_budget_exceeded: "degrade"    # stop|degrade
+
+email:
+  subject_template: "[Daily Briefing][{date}] Papers: strong {papers_strong}/{papers_total} | PhD: {jobs_total}"
+  smtp_host: "smtp.gmail.com"
+  smtp_port: 465
+  send_when_empty: true
+  random_review_when_empty: true   # v2.1: random review on no-update days
+  attach_html: true
+  attach_filename: "daily_brief_{run_id}.html"
+  # Optional dev safeguard: if set (and runtime.env=dev), all emails go to this address.
+  dev_override_to: ""
+  from_env:
+    user: "EMAIL_USER"
+    pass: "EMAIL_PASS"
+  to_env: "TARGET_EMAIL"
+  alert_to_env: "TARGET_EMAIL"     # failure alerts default to self (can also use a separate ALERT_EMAIL)
+
+runtime:
+  env: "dev"                       # dev|prod
+  timezone: "Asia/Tokyo"
+  http_timeout_sec: 20
+  http_retries: 3
+  user_agent: "foryourseek/0.1 (+https://github.com/yourname/foryourseek)"
+  state_db_path: "state/history.db"
+  keep_error_days: 30
+  max_papers_debug: 0              # default before CLI override (0=no limit)
+  max_jobs_debug: 0

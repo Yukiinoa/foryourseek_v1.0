@@ -1,0 +1,20 @@
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# These entrypoints intentionally tweak sys.path to support the src/ layout without installation.
+"main.py" = ["E402"]
+"scripts/*.py" = ["E402"]

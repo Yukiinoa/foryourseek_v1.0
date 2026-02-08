@@ -1,0 +1,5 @@
+# Development-only tools (not required to run the pipeline).
+black>=24.0,<26
+isort>=5.13,<7
+ruff>=0.6,<1
+pytest>=7,<9

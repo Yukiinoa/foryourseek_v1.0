@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Briefing</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f7;font-family:Arial, Helvetica, sans-serif;color:#222;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f7;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+        <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e6e6eb;border-radius:8px;">
+          <tr>
+            <td style="padding:24px;">
+              <div style="font-size:20px;font-weight:700;margin-bottom:4px;">Daily Briefing</div>
+              <div style="font-size:12px;color:#666;margin-bottom:12px;">{{ date }} · Run {{ run_id }}</div>
+              <div style="font-size:12px;color:#555;margin-bottom:12px;">
+                Model: {{ llm_model }} · Calls: {{ llm_calls_display }} · Tokens: {{ llm_tokens_display }} · Cost: ${{ "%.4f"|format(llm_cost_usd) }} · Time: {{ duration_str }}
+              </div>
+
+              {% if papers_strong %}
+              <div style="font-size:16px;font-weight:700;border-bottom:1px solid #eee;padding-bottom:6px;margin-top:18px;">Must Read Papers</div>
+              {% for p in papers_strong %}
+              <div style="margin-top:12px;">
+                <div style="font-size:15px;font-weight:600;margin-bottom:4px;">
+                  <a href="{{ p.url }}" style="color:#2563eb;text-decoration:none;">{{ p.title }}</a>
+                </div>
+                <div style="font-size:12px;color:#666;margin-bottom:6px;">
+                  {{ p.journal_norm or p.journal }} · {{ p.published_at_norm or p.published_at }}{% if p.doi %} · DOI {{ p.doi }}{% endif %}
+                </div>
+                {% if p.summary_bullets %}
+                <ul style="margin:0;padding-left:18px;font-size:12px;color:#444;">
+                  {% for b in p.summary_bullets %}<li>{{ b }}</li>{% endfor %}
+                </ul>
+                {% endif %}
+              </div>
+              {% endfor %}
+              {% endif %}
+
+              {% if jobs_top %}
+              <div style="font-size:16px;font-weight:700;border-bottom:1px solid #eee;padding-bottom:6px;margin-top:18px;">Top PhD Opportunities</div>
+              {% for j in jobs_top %}
+              <div style="margin-top:12px;">
+                <div style="font-size:15px;font-weight:600;margin-bottom:4px;">
+                  <a href="{{ j.url }}" style="color:#2563eb;text-decoration:none;">{{ j.title }}</a>
+                </div>
+                <div style="font-size:12px;color:#666;margin-bottom:6px;">
+                  {{ j.org_norm or j.org }} · {{ j.location_norm or j.location }}{% if j.deadline %} · Deadline {{ j.deadline_norm or j.deadline }}{% endif %}
+                </div>
+                {% if j.salary or j.contract_type or j.funding_programme %}
+                <div style="font-size:11px;color:#444;margin-bottom:6px;">
+                  {% if j.salary %}<span style="display:inline-block;background:#fffbeb;border:1px solid #fef3c7;border-radius:4px;padding:2px 6px;margin-right:6px;">Salary: {{ j.salary_norm or j.salary }}</span>{% endif %}
+                  {% if j.contract_type %}<span style="display:inline-block;background:#eff6ff;border:1px solid #dbeafe;border-radius:4px;padding:2px 6px;margin-right:6px;">Contract: {{ j.contract_type_norm or j.contract_type }}</span>{% endif %}
+                  {% if j.funding_programme %}<span style="display:inline-block;background:#f0fdf4;border:1px solid #dcfce7;border-radius:4px;padding:2px 6px;">Funding: {{ j.funding_programme }}</span>{% endif %}
+                </div>
+                {% endif %}
+                {% if j.summary_bullets %}
+                <ul style="margin:0;padding-left:18px;font-size:12px;color:#444;">
+                  {% for b in j.summary_bullets %}<li>{{ b }}</li>{% endfor %}
+                </ul>
+                {% endif %}
+              </div>
+              {% endfor %}
+              {% endif %}
+
+              {% if jobs_list %}
+              <div style="font-size:16px;font-weight:700;border-bottom:1px solid #eee;padding-bottom:6px;margin-top:18px;">More PhD Positions</div>
+              {% for j in jobs_list %}
+              <div style="margin-top:10px;">
+                <div style="font-size:14px;font-weight:600;margin-bottom:2px;">
+                  <a href="{{ j.url }}" style="color:#2563eb;text-decoration:none;">{{ j.title }}</a>
+                </div>
+                <div style="font-size:12px;color:#666;margin-bottom:4px;">
+                  {{ j.org_norm or j.org }} · {{ j.location_norm or j.location }}{% if j.deadline %} · Deadline {{ j.deadline_norm or j.deadline }}{% endif %}
+                </div>
+                {% if j.summary_bullets %}
+                <div style="font-size:12px;color:#444;">{{ j.summary_bullets[0] }}</div>
+                {% endif %}
+              </div>
+              {% endfor %}
+              {% endif %}
+
+              {% if papers_normal %}
+              <div style="font-size:16px;font-weight:700;border-bottom:1px solid #eee;padding-bottom:6px;margin-top:18px;">More Papers</div>
+              {% for p in papers_normal %}
+              <div style="margin-top:10px;">
+                <div style="font-size:14px;font-weight:600;margin-bottom:2px;">
+                  <a href="{{ p.url }}" style="color:#2563eb;text-decoration:none;">{{ p.title }}</a>
+                </div>
+                <div style="font-size:12px;color:#666;">{{ p.journal_norm or p.journal }} · {{ p.published_at_norm or p.published_at }}</div>
+              </div>
+              {% endfor %}
+              {% endif %}
+
+              {% if random_review %}
+              <div style="font-size:16px;font-weight:700;border-bottom:1px solid #eee;padding-bottom:6px;margin-top:18px;">Flashback Review</div>
+              <div style="margin-top:10px;">
+                <div style="font-size:14px;font-weight:600;margin-bottom:2px;">
+                  <a href="{{ random_review.url }}" style="color:#2563eb;text-decoration:none;">{{ random_review.title }}</a>
+                </div>
+                <div style="font-size:12px;color:#666;">{{ random_review.journal_norm or random_review.journal }} · {{ random_review.published_at_norm or random_review.published_at }}</div>
+              </div>
+              {% endif %}
+
+              <div style="margin-top:20px;font-size:11px;color:#999;text-align:center;">
+                Generated by foryourseek
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -1,0 +1,186 @@
+name: Daily Briefing
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-briefing
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      # Optional: provide your full config.yaml via a secret to avoid committing it.
+      CONFIG_YAML_B64: ${{ secrets.CONFIG_YAML_B64 }}
+      # Optional: push state/history.db to a `state` branch (opt-in; avoid on public repos).
+      PUSH_STATE: ${{ vars.PUSH_STATE }}
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Prepare config.yaml
+        run: |
+          if [ -n "${CONFIG_YAML_B64:-}" ]; then
+            echo "$CONFIG_YAML_B64" | base64 -d > config.yaml
+            echo "config.yaml written from CONFIG_YAML_B64"
+          elif [ ! -f config.yaml ]; then
+            cp config.example.yaml config.yaml
+            echo "WARNING: using config.example.yaml. Please create your own config.yaml in repo (private) or generate it here."
+          fi
+
+      - name: Normalize config newlines
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path("config.yaml")
+          text = p.read_text()
+          if "\\n" in text and "\n" not in text:
+            p.write_text(text.replace("\\n", "\n") + "\n")
+          PY
+
+      - name: Debug config
+        run: |
+          ls -la
+          python - <<'PY'
+          import yaml, sys
+          from pathlib import Path
+          p = Path("config.yaml")
+          print("config exists:", p.exists())
+          if not p.exists():
+              sys.exit(2)
+          try:
+              yaml.safe_load(p.read_text())
+              print("config parse ok")
+          except Exception as e:
+              print("config parse failed:", e)
+              sys.exit(2)
+          PY
+
+      - name: MiniMax connectivity check
+        env:
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+        run: |
+          python - <<'PY'
+          import os
+          import socket
+          import sys
+          from urllib.parse import urlparse
+          from pathlib import Path
+          import yaml
+          import requests
+
+          cfg = yaml.safe_load(Path("config.yaml").read_text()) or {}
+          llm_cfg = cfg.get("llm", {}) or {}
+          provider = (llm_cfg.get("provider") or "").lower()
+          fallback = [p.lower() for p in (llm_cfg.get("fallback_providers") or [])]
+          key = (os.environ.get("MINIMAX_API_KEY") or "").strip()
+          if not key:
+              print("MiniMax check skipped (no MINIMAX_API_KEY).")
+              sys.exit(0)
+          should_check = (provider == "minimax") or ("minimax" in fallback) or bool(key)
+          if not should_check:
+              print("MiniMax check skipped (provider not in use).")
+              sys.exit(0)
+
+          opts = (llm_cfg.get("provider_options") or {}).get("minimax") or {}
+          api_base = (opts.get("api_base") or "https://api.minimaxi.com/v1").rstrip("/")
+          host = urlparse(api_base).hostname or ""
+          if not host:
+              print("MiniMax check failed: invalid api_base:", api_base)
+              sys.exit(2)
+
+          try:
+              ip = socket.gethostbyname(host)
+              print("MiniMax DNS:", host, "->", ip)
+          except Exception as e:
+              print("MiniMax DNS failed:", host, e)
+              sys.exit(2)
+
+          url = f"{api_base}/chat/completions"
+          headers = {
+              "Content-Type": "application/json",
+              "Authorization": f"Bearer {key}",
+          }
+          payload = {
+              "model": (opts.get("model") or "MiniMax-M2.1"),
+              "messages": [{"role": "user", "content": "ping"}],
+              "temperature": 0,
+          }
+          try:
+              resp = requests.post(url, headers=headers, json=payload, timeout=15)
+              print("MiniMax HTTP status:", resp.status_code)
+              print("MiniMax HTTP body (first 200 chars):", resp.text[:200])
+              if resp.status_code >= 400:
+                  sys.exit(2)
+          except Exception as e:
+              print("MiniMax HTTP failed:", e)
+              sys.exit(2)
+          PY
+
+      - name: Run pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          PUBLISHER_API_BASE: ${{ secrets.PUBLISHER_API_BASE }}
+          PUBLISHER_API_KEY: ${{ secrets.PUBLISHER_API_KEY }}
+          PUBLISHER_API_INSTTOKEN: ${{ secrets.PUBLISHER_API_INSTTOKEN }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          TARGET_EMAIL: ${{ secrets.TARGET_EMAIL }}
+          TZ: Asia/Tokyo
+        run: |
+          # Open-source friendly default: dry-run (renders HTML + logs, does not send emails).
+          # To enable email sending, remove --dry-run and set runtime.env="prod" in config.yaml.
+          mkdir -p logs
+          python main.py --dry-run 2>&1 | tee logs/runner.log
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs
+          path: logs/
+          if-no-files-found: ignore
+
+      - name: Push DB to state branch (orphan, keep latest only)
+        if: ${{ always() && env.PUSH_STATE == 'true' }}
+        run: |
+          set -e
+          if [ ! -f state/history.db ]; then
+            echo "No state/history.db found; skip pushing state."
+            exit 0
+          fi
+
+          cp state/history.db /tmp/history.db
+
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+
+          git fetch origin state || true
+          # Always create a fresh orphan branch to avoid name collision with ./state directory.
+          git checkout --orphan state
+
+          # Remove tracked files from this branch
+          git rm -rf . || true
+
+          mkdir -p state
+          cp /tmp/history.db state/history.db
+
+          git add -f state/history.db
+          git commit -m "state: update $(date +'%Y-%m-%d')" --allow-empty
+          git push --force origin state

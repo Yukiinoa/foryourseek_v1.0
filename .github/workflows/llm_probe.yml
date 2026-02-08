@@ -1,0 +1,119 @@
+name: LLM Probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Prepare config.yaml
+        run: |
+          if [ ! -f config.yaml ]; then
+            cp config.example.yaml config.yaml
+            echo "WARNING: using config.example.yaml. Please create your own config.yaml in repo (private) or generate it here."
+          fi
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+          p = Path("config.yaml")
+          text = p.read_text()
+          # Fix accidental escaped newlines if present
+          try:
+            data = yaml.safe_load(text) or {}
+          except Exception:
+            data = {}
+          if (not isinstance(data, dict) or not data) and "\\n" in text:
+            text = text.replace("\\n", "\n")
+          p.write_text(text if text.endswith("\n") else text + "\n")
+          PY
+
+      - name: LLM raw probe (no parsing)
+        env:
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python - <<'PY'
+          import os
+          import json
+          import sys
+          from pathlib import Path
+          import yaml
+          import requests
+
+          sys.path.insert(0, str(Path("src").resolve()))
+          cfg = yaml.safe_load(Path("config.yaml").read_text()) or {}
+          llm_cfg = cfg.get("llm", {}) or {}
+          provider = (llm_cfg.get("provider") or "minimax").lower()
+          opts = (llm_cfg.get("provider_options") or {}).get(provider) or {}
+          model = opts.get("model") or llm_cfg.get("model") or "MiniMax-M2.1"
+          temperature = float(llm_cfg.get("temperature", 0) or 0)
+          use_response_format = bool(opts.get("use_response_format", llm_cfg.get("use_response_format", True)))
+          response_format = opts.get("response_format", llm_cfg.get("response_format", "json_object"))
+
+          # Build a realistic prompt using existing builder (papers)
+          from foryourseek.core.llm import _build_paper_prompt
+          profile = (cfg.get("profile") or {})
+          thresholds = {
+              "strong_threshold": int((cfg.get("papers") or {}).get("strong_threshold", 8)),
+              "normal_threshold": int((cfg.get("papers") or {}).get("normal_threshold", 5)),
+          }
+          prompt = _build_paper_prompt(
+              profile,
+              thresholds,
+              "Test Paper Title",
+              "This is a short abstract about remote sensing, SAR, hydrology, and flood mapping.",
+              "Test Journal",
+              "2026-02-04",
+              "https://example.com/paper",
+              output_language=(llm_cfg.get("output_language", "en") or "en").lower(),
+          )
+
+          if provider in ("minimax", "openai"):
+              api_base = (opts.get("api_base") or ("https://api.minimaxi.com/v1" if provider == "minimax" else "https://api.openai.com/v1")).rstrip("/")
+              key_env = opts.get("api_key_env") or ("MINIMAX_API_KEY" if provider == "minimax" else "OPENAI_API_KEY")
+              api_key = os.environ.get(key_env, "")
+              if not api_key:
+                  print(f"No API key found in env: {key_env}")
+                  raise SystemExit(2)
+              payload = {
+                  "model": model,
+                  "messages": [
+                      {"role": "system", "content": "You are a precise academic assistant. Output JSON only, with no extra text."},
+                      {"role": "user", "content": prompt},
+                  ],
+                  "temperature": temperature,
+              }
+              if use_response_format and response_format:
+                  payload["response_format"] = {"type": response_format}
+              headers = {
+                  "Authorization": f"Bearer {api_key}",
+                  "Content-Type": "application/json",
+              }
+              url = f"{api_base}/chat/completions"
+              resp = requests.post(url, headers=headers, json=payload, timeout=20)
+              print("provider:", provider)
+              print("model:", model)
+              print("status:", resp.status_code)
+              print("body (first 4000 chars):")
+              print(resp.text[:4000])
+          else:
+              print(f"Provider '{provider}' not supported in probe. Only minimax/openai are supported here.")
+          PY

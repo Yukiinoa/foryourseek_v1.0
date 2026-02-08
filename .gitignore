@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ruff_cache/
+.pytest_cache/
+.venv/
+.env
+.env.*
+!.env.example
+*.egg-info/
+dist/
+build/
+
+# Local config (contains personal profile)
+config.yaml
+
+# Runtime state
+state/history.db
+state/*.db
+state/*.sqlite
+state/*.sqlite3
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
